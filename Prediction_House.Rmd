@@ -1,0 +1,114 @@
+---
+title: "Prediction_House"
+author: "Athia"
+date: "2024-08-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(corrplot)
+library(scales)
+library(RColorBrewer)
+library(broom)
+library(modelr)
+library(glmnet)
+options(scipen = 999)
+```
+
+```{r}
+data <- read.csv("kc_house_data.csv")
+head(data)
+```
+
+```{r}
+dim(data)
+```
+
+```{r}
+str(data)
+```
+
+```{r}
+colSums(is.na(data))
+```
+
+```{r}
+data %>%
+  ggplot(aes(x = bathrooms)) +
+  geom_histogram(binwidth = 0.5, fill = "skyblue", color = "black") +
+  labs(x = 'Number of Bathrooms', 
+       y = 'Frequency', 
+       title = 'Distribution of Number of Bathrooms') +
+  theme_minimal()
+
+```
+
+
+```{r}
+data %>%
+  ggplot(aes(x = sqft_living, y = price)) +
+  geom_point(color = "blue", alpha = 0.5) +
+  labs(x = 'Sqft Living Area', 
+       y = 'Price',
+       title = 'Relationship between Sqft Living and Price') +
+  theme_minimal() +
+  scale_y_continuous(labels = comma)
+```
+
+```{r}
+data %>%
+  ggplot(aes(x = sqft_lot, y = price)) +
+  geom_point(color = "red", alpha = 0.5) +
+  labs(x = 'Sqft Lot Area', 
+       y = 'Price',
+       title = 'Relationship between Sqft Lot and Price') +
+  theme_minimal() +
+  scale_y_continuous(labels = comma)
+```
+
+```{r}
+# Select numeric variables only
+numeric_vars <- data %>%
+  select_if(is.numeric) 
+
+# Compute correlation matrix
+cor_numVar <- cor(numeric_vars, use = "pairwise.complete.obs")
+
+# Plot the correlation matrix
+corrplot.mixed(cor_numVar, tl.col = "black", tl.pos = "lt")
+```
+
+```{r}
+set.seed(123)
+train_test_split <- sample(c(TRUE, FALSE), nrow(data), replace = TRUE, prob = c(0.7, 0.3))
+train <- data[train_test_split, ]
+test <- data[!train_test_split, ]
+```
+
+```{r}
+model1 <- lm(price ~ sqft_living, data = train)
+summary(model1)
+```
+
+```{r}
+par(mfrow = c(2, 2))
+plot(model1)
+par(mfrow = c(1, 1))
+```
+
+```{r}
+test_predictions <- predict(model1, newdata = test)
+test_results <- test %>%
+  mutate(predicted_price = test_predictions) %>%
+  select(price, predicted_price)
+
+head(test_results)
+
+```
+
